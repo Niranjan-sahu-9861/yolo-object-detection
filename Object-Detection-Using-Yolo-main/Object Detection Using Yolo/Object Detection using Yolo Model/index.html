@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Python Script Runner</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(120deg, #07091f, #0d1440);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+}
+
+/* STACK CONTAINERS VERTICALLY */
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ================= PYTHON CARD ================= */
+.python-card {
+    width: 460px;
+    background: linear-gradient(145deg, #1a1f4d, #0e1236);
+    border-radius: 22px;
+    padding: 28px;
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease-out;
+}
+
+/* TITLE */
+.title {
+    text-align: center;
+}
+
+.title .top {
+    font-size: 28px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #6dd5ff, #c77dff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.title .bottom {
+    font-size: 28px;
+    font-weight: bold;
+    color: #6dd5ff;
+    display: inline-block;
+    border-bottom: 3px solid #6dd5ff;
+    padding-bottom: 4px;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 14px;
+    opacity: 0.8;
+    margin: 14px 0;
+}
+
+/* BUTTONS */
+button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+}
+
+.run { background: linear-gradient(90deg, #8a2be2, #ff4d88); }
+.executing { background: linear-gradient(90deg, #ff4d88, #8a2be2); }
+.done { background: linear-gradient(90deg, #00ff99, #00ccff); }
+
+.status {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #7fffd4;
+    text-align: center;
+}
+
+/* TERMINAL */
+.terminal {
+    background: #07091f;
+    border-radius: 14px;
+    margin-top: 18px;
+    padding: 12px;
+    height: 150px;
+    font-size: 13px;
+    overflow-y: auto;
+}
+
+.terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.red { background: #ff5f56; }
+.yellow { background: #ffbd2e; }
+.green { background: #27c93f; }
+
+.filename {
+    margin-left: 10px;
+    color: #9fdcff;
+}
+
+.log { margin: 5px 0; }
+
+/* ================= YOLO CARD (SECOND CONTAINER) ================= */
+.yolo-card {
+    width: 460px;
+    padding: 18px;
+    background: linear-gradient(145deg, #0e1236, #1a1f4d);
+    border-radius: 18px;
+    text-align: center;
+}
+
+.yolo-card h3 {
+    margin-bottom: 12px;
+    color: #ffcc33;
+}
+
+.detect {
+    background: linear-gradient(90deg, #ffb347, #ffcc33);
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- PYTHON SCRIPT RUNNER -->
+    <div class="python-card" id="pythonCard">
+
+        <div class="title">
+            <div class="top">Python Script</div>
+            <div class="bottom">Runner</div>
+        </div>
+
+        <p class="subtitle">
+            Execute your Python scripts with real-time monitoring
+        </p>
+
+        <button id="mainBtn" class="run" onclick="runScript()">▶ Run Script</button>
+        <div class="status" id="status"></div>
+
+        <div class="terminal" id="terminal">
+            <div class="terminal-header">
+                <div class="dots">
+                    <span class="red"></span>
+                    <span class="yellow"></span>
+                    <span class="green"></span>
+                </div>
+                <div class="filename">python_script_runner.py</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YOLO OBJECT DETECTION (BELOW) -->
+    <div class="yolo-card">
+        <h3>YOLO Object Detection</h3>
+        <button id="detectBtn" class="detect" onclick="startDetection()" disabled>
+            🚫 START DETECTION
+        </button>
+    </div>
+
+</div>
+
+<script>
+/* ===== 3D HOVER ONLY FOR PYTHON CARD ===== */
+const card = document.getElementById("pythonCard");
+
+card.addEventListener("mousemove", (e) => {
+    const r = card.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+
+    card.style.transform =
+        `rotateX(${(r.height/2 - y)/10}deg)
+         rotateY(${(x - r.width/2)/10}deg)
+         scale(1.04)`;
+});
+
+card.addEventListener("mouseleave", () => {
+    card.style.transform = "rotateX(0) rotateY(0) scale(1)";
+});
+
+/* ===== SCRIPT LOGIC ===== */
+let step = 0;
+let timer;
+
+function log(text) {
+    const t = document.getElementById("terminal");
+    const d = document.createElement("div");
+    d.className = "log";
+    d.innerHTML = "> " + text;
+    t.appendChild(d);
+    t.scrollTop = t.scrollHeight;
+}
+
+function runScript() {
+    const btn = document.getElementById("mainBtn");
+    btn.innerHTML = "⏳ Executing...";
+    btn.className = "executing";
+    btn.disabled = true;
+
+    document.getElementById("status").innerText =
+        "Initializing script execution...";
+
+    step = 0;
+    document.getElementById("terminal").innerHTML = `
+        <div class="terminal-header">
+            <div class="dots">
+                <span class="red"></span>
+                <span class="yellow"></span>
+                <span class="green"></span>
+            </div>
+            <div class="filename">python_script_runner.py</div>
+        </div>
+    `;
+
+    timer = setInterval(runSteps, 900);
+}
+
+function runSteps() {
+    step++;
+    if (step === 1) log("Initializing Python environment...");
+    if (step === 2) log("Checking dependencies... ✓");
+    if (step === 3) log("Importing required modules... ✓");
+    if (step === 4) {
+        log("Execution completed successfully ✓✓");
+        clearInterval(timer);
+
+        const btn = document.getElementById("mainBtn");
+        btn.innerHTML = "✔ Done Go For Detection";
+        btn.className = "done";
+
+        document.getElementById("status").innerText =
+            "Script executed successfully";
+
+        const dBtn = document.getElementById("detectBtn");
+        dBtn.disabled = false;
+        dBtn.innerHTML = "▶ START DETECTION";
+    }
+}
+
+function startDetection() {
+    log("YOLO model loading...");
+    setTimeout(() => log("Camera initialized"), 800);
+    setTimeout(() => log("Object detection started 🚀"), 1600);
+}
+</script>
+
+</body>
+</html>
